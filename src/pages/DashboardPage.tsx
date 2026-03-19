@@ -925,20 +925,15 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 12 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
-            <h1 className="heading-xl">{getGreeting()}</h1>
-            <Clock size={16} style={{ color: 'var(--text-tertiary)' }} />
-          </div>
-          <p className="body-sm" style={{ color: 'var(--text-tertiary)' }}>
-            {format(new Date(), 'EEEE, MMMM d, yyyy')}
-            {todayCount > 0 && (
-              <span style={{ marginLeft: 12, color: 'var(--accent-blue)', fontWeight: 500 }}>
-                {todayCount} task{todayCount !== 1 ? 's' : ''} to do
-              </span>
-            )}
-          </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, gap: 12 }}>
+        <div className="page-greeting">
+          <p className="page-greeting-time">{format(new Date(), 'EEEE · MMMM d')}</p>
+          <h1 className="page-greeting-title">{getGreeting()}</h1>
+          {todayCount > 0 && (
+            <p className="body-sm" style={{ marginTop: 6, color: 'var(--text-tertiary)' }}>
+              {todayCount} task{todayCount !== 1 ? 's' : ''} on your list today
+            </p>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
           <button
