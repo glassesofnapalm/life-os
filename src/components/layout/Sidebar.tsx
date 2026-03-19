@@ -2,18 +2,21 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, CalendarDays, CheckSquare, Target, Sparkles,
-  Heart, Image, Plus, Sun, Moon, FileText, Archive, PanelLeft, PanelLeftClose, Settings, X
+  Heart, Image, Plus, Sun, Moon, FileText, Archive, PanelLeft, PanelLeftClose, Settings, X,
+  UtensilsCrossed, StickyNote,
 } from 'lucide-react'
 import { useStore, useActions } from '@/stores/store'
 
 const mainNav = [
-  { to: '/',           icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/calendar',   icon: CalendarDays,    label: 'Calendar' },
-  { to: '/tasks',      icon: CheckSquare,     label: 'Tasks' },
-  { to: '/backlog',    icon: Archive,         label: 'Backlog' },
-  { to: '/goals',      icon: Target,          label: 'Goals' },
-  { to: '/life-events',icon: Heart,           label: 'Life Events' },
-  { to: '/vision-board',icon: Image,          label: 'Vision Board' },
+  { to: '/',            icon: LayoutDashboard,  label: 'Dashboard' },
+  { to: '/calendar',    icon: CalendarDays,     label: 'Calendar' },
+  { to: '/tasks',       icon: CheckSquare,      label: 'Tasks' },
+  { to: '/backlog',     icon: Archive,          label: 'Backlog' },
+  { to: '/goals',       icon: Target,           label: 'Goals' },
+  { to: '/notes',       icon: StickyNote,       label: 'Notes' },
+  { to: '/recipes',     icon: UtensilsCrossed,  label: 'Meal Planner' },
+  { to: '/life-events', icon: Heart,            label: 'Life Events' },
+  { to: '/vision-board',icon: Image,            label: 'Vision Board' },
 ]
 
 interface SidebarProps {

@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { format, differenceInDays, parseISO, isTomorrow, isToday, startOfWeek, addDays } from 'date-fns'
+import { format, differenceInDays, parseISO, isTomorrow, isToday } from 'date-fns'
 import {
   CheckCircle2, Circle, Calendar, Target, Sparkles, Clock,
   Music, BookOpen, Cloud, MapPin, Wind, Droplets,
   Plus, Trash2, Pencil, ChevronDown, ChevronRight,
   TrendingUp, ListChecks, GripVertical, X, Settings2,
   SkipBack, SkipForward, Play, Pause, Search, Check,
-  ChefHat, Loader2, UtensilsCrossed,
+  ChefHat, Loader2, Maximize2, Minimize2,
+  ArrowRight,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -16,7 +18,7 @@ import {
   arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useStore, useActions, reorderWidgets, toggleWidgetVisible, toggleWidgetCollapsed, addWidget, addWeatherCity, removeWeatherCity, updateMealPlan, setMealDay } from '@/stores/store'
+import { useStore, useActions, reorderWidgets, toggleWidgetVisible, toggleWidgetCollapsed, addWidget, addWeatherCity, removeWeatherCity, resizeWidget } from '@/stores/store'
 import type { Task, Goal, LifeEvent, CalendarEvent, Book as BookType, BookStatus, Widget, WidgetType, WeatherCity, MealDay } from '@/types'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { Badge } from '@/components/ui/Badge'
@@ -26,7 +28,6 @@ import {
   spotifyPlay, spotifyPause, spotifyNext, spotifyPrev,
   type SpotifyTrack,
 } from '@/lib/spotify'
-import { isClaudeConfigured, generateMealPlan } from '@/lib/claude'
 
 /* ── Helpers ──────────────────────────────────────────────────── */
 function getGreeting() {
@@ -134,13 +135,22 @@ function DashCard({
           </button>
         )}
         {editMode && (
-          <button
-            onClick={() => toggleWidgetVisible(widget.id)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', display: 'flex', padding: 2, borderRadius: 4 }}
-            title="Hide widget"
-          >
-            <X size={13} />
-          </button>
+          <>
+            <button
+              onClick={() => resizeWidget(widget.id, widget.span === 2 ? 1 : 2)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', display: 'flex', padding: 2, borderRadius: 4 }}
+              title={widget.span === 2 ? 'Shrink widget' : 'Expand widget (wide)'}
+            >
+              {widget.span === 2 ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            </button>
+            <button
+              onClick={() => toggleWidgetVisible(widget.id)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', display: 'flex', padding: 2, borderRadius: 4 }}
+              title="Hide widget"
+            >
+              <X size={13} />
+            </button>
+          </>
         )}
       </div>
       {!widget.collapsed && (
@@ -154,10 +164,11 @@ function DashCard({
 
 /* ── Sortable item wrapper ────────────────────────────────────── */
 function SortableItem({
-  id, editMode, children,
+  id, editMode, span, children,
 }: {
   id: string
   editMode: boolean
+  span?: 1 | 2
   children: (listeners: Record<string, unknown>) => React.ReactNode
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -173,6 +184,7 @@ function SortableItem({
         opacity:   isDragging ? 0.45 : 1,
         zIndex:    isDragging ? 999 : undefined,
         position:  'relative',
+        gridColumn: span === 2 ? 'span 2' : undefined,
       }}
       {...attributes}
     >
@@ -802,168 +814,61 @@ function MilestonesContent({ events }: { events: LifeEvent[] }) {
   )
 }
 
-/* ── Recipes / Meal Planner widget ────────────────────────────── */
-const MEAL_TYPES: Array<{ key: keyof MealDay; label: string }> = [
-  { key: 'breakfast', label: 'Breakfast' },
-  { key: 'lunch',     label: 'Lunch'     },
-  { key: 'dinner',    label: 'Dinner'    },
-  { key: 'snack',     label: 'Snack'     },
+/* ── Recipes widget (today-only compact) ──────────────────────── */
+const MEAL_KEYS: Array<{ key: keyof MealDay; label: string; color: string }> = [
+  { key: 'breakfast', label: 'Breakfast', color: 'var(--accent-orange)' },
+  { key: 'lunch',     label: 'Lunch',     color: 'var(--accent-blue)'   },
+  { key: 'dinner',    label: 'Dinner',    color: 'var(--accent-purple)'  },
+  { key: 'snack',     label: 'Snack',     color: 'var(--accent-green)'   },
 ]
 
 function RecipesContent() {
   const mealPlan = useStore(s => s.mealPlan)
-  const [generating, setGenerating]   = useState(false)
-  const [genError, setGenError]       = useState<string | null>(null)
-  const [activeDay, setActiveDay]     = useState(0) // 0–6 offset from today
-  const [expandedMeal, setExpanded]   = useState<string | null>(null)
-  const hasKey = isClaudeConfigured()
+  const todayDate = new Date().toISOString().split('T')[0]
+  const todayData = mealPlan.days.find(d => d.date === todayDate)
 
-  // Current week dates (today + 6 days)
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() + i)
-    return d.toISOString().split('T')[0]
-  })
-
-  const activeDayData = mealPlan.days.find(d => d.date === weekDates[activeDay])
-
-  async function handleGenerate() {
-    setGenError(null)
-    setGenerating(true)
-    try {
-      const days = await generateMealPlan(mealPlan.calorieTarget, mealPlan.preferences)
-      days.forEach(day => setMealDay(day))
-    } catch (e: any) {
-      setGenError(e.message)
-    } finally {
-      setGenerating(false)
-    }
-  }
+  const totalCal = todayData
+    ? MEAL_KEYS.reduce((s, { key }) => s + ((todayData[key] as any)?.calories ?? 0), 0)
+    : 0
 
   return (
     <div>
-      {/* Config row */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 140 }}>
-          <UtensilsCrossed size={12} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
-          <input
-            type="number"
-            min={800} max={5000} step={50}
-            value={mealPlan.calorieTarget}
-            onChange={e => updateMealPlan({ calorieTarget: parseInt(e.target.value) || 2000 })}
-            style={{ width: 70, fontSize: 13, background: 'var(--glass-bg-active)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '4px 8px', color: 'var(--text-primary)' }}
-          />
-          <span className="body-xs">kcal / day</span>
-        </div>
-        <button
-          onClick={handleGenerate}
-          disabled={generating || !hasKey}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600,
-            padding: '5px 14px', borderRadius: 'var(--radius-md)',
-            background: hasKey ? '#1DB954' : 'var(--glass-bg-active)',
-            border: 'none', color: hasKey ? '#000' : 'var(--text-tertiary)',
-            cursor: hasKey && !generating ? 'pointer' : 'not-allowed', opacity: generating ? 0.7 : 1,
-          }}
-          title={!hasKey ? 'Add your Claude API key in Settings' : undefined}
-        >
-          {generating ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <ChefHat size={13} />}
-          {generating ? 'Generating...' : 'Generate Plan'}
-        </button>
-      </div>
-
-      {/* Preferences */}
-      <input
-        className="input"
-        placeholder="Preferences (e.g. vegetarian, no nuts)"
-        value={mealPlan.preferences}
-        onChange={e => updateMealPlan({ preferences: e.target.value })}
-        style={{ fontSize: 12, marginBottom: 12, width: '100%' }}
-      />
-
-      {!hasKey && (
-        <p className="body-xs" style={{ color: 'var(--accent-orange)', marginBottom: 10 }}>
-          Add your Anthropic API key in <a href="/settings" style={{ color: 'var(--accent-blue)' }}>Settings</a> to generate meal plans.
-        </p>
-      )}
-      {genError && <p className="body-xs" style={{ color: 'var(--accent-red)', marginBottom: 10 }}>{genError}</p>}
-
-      {/* Day tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 12, overflowX: 'auto' }}>
-        {weekDates.map((date, i) => {
-          const d = new Date(date)
-          const hasMeals = mealPlan.days.some(day => day.date === date)
-          return (
-            <button key={date} onClick={() => setActiveDay(i)}
-              style={{
-                flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
-                border: `1px solid ${activeDay === i ? 'var(--accent-pink)' : 'var(--glass-border)'}`,
-                background: activeDay === i ? 'var(--accent-pink-glass)' : hasMeals ? 'var(--glass-bg-active)' : 'var(--glass-bg)',
-                color: activeDay === i ? 'var(--accent-pink)' : 'var(--text-secondary)',
-              }}
-            >
-              {i === 0 ? 'Today' : format(d, 'EEE')}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Meals for active day */}
-      {!activeDayData ? (
+      {!todayData ? (
         <div style={{ textAlign: 'center', padding: '16px 0' }}>
           <ChefHat size={24} style={{ color: 'var(--text-tertiary)', margin: '0 auto 8px', opacity: 0.5 }} />
-          <p className="body-sm">No meals planned.</p>
-          {hasKey && <p className="body-xs">Click Generate Plan to create your week.</p>}
+          <p className="body-sm" style={{ marginBottom: 6 }}>No meals planned for today.</p>
+          <Link to="/recipes" style={{ fontSize: 12, color: 'var(--accent-pink)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            Open Meal Planner <ArrowRight size={11} />
+          </Link>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {MEAL_TYPES.map(({ key, label }) => {
-            const recipe = activeDayData[key] as any
-            if (!recipe) return null
-            const mealKey = `${activeDayData.date}-${key}`
-            const isExpanded = expandedMeal === mealKey
-            return (
-              <div key={key} style={{ background: 'var(--glass-bg-active)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', cursor: 'pointer' }}
-                  onClick={() => setExpanded(isExpanded ? null : mealKey)}
-                >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span className="body-xs">{format(new Date(), 'EEEE, MMM d')}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-pink)' }}>{totalCal} kcal</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {MEAL_KEYS.map(({ key, label, color }) => {
+              const recipe = todayData[key] as any
+              if (!recipe) return null
+              return (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 'var(--radius-md)', background: 'var(--glass-bg-active)', border: '1px solid var(--glass-border)' }}>
+                  <div style={{ width: 3, height: 30, borderRadius: 2, background: color, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="body-xs" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 1 }}>{label}</p>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</p>
+                    <p style={{ fontSize: 10, color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 1 }}>{label}</p>
+                    <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</p>
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-pink)' }}>{recipe.calories} kcal</p>
-                    {(recipe.protein || recipe.carbs || recipe.fat) && (
-                      <p className="body-xs">P:{recipe.protein}g C:{recipe.carbs}g F:{recipe.fat}g</p>
-                    )}
-                  </div>
-                  {isExpanded ? <ChevronDown size={13} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} /> : <ChevronRight size={13} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />}
+                  <span style={{ fontSize: 11, fontWeight: 700, color, flexShrink: 0 }}>{recipe.calories}</span>
                 </div>
-                {isExpanded && (
-                  <div style={{ padding: '0 12px 12px', borderTop: '1px solid var(--glass-border)' }}>
-                    {recipe.prepTime && <p className="body-xs" style={{ marginTop: 8, marginBottom: 4 }}>Prep: {recipe.prepTime} min · Serves {recipe.servings || 1}</p>}
-                    {recipe.ingredients?.length > 0 && (
-                      <div style={{ marginBottom: 8 }}>
-                        <p className="body-xs" style={{ fontWeight: 600, marginBottom: 4, color: 'var(--text-secondary)' }}>Ingredients</p>
-                        <ul style={{ paddingLeft: 16, margin: 0 }}>
-                          {recipe.ingredients.map((ing: string, i: number) => (
-                            <li key={i} className="body-xs" style={{ marginBottom: 2 }}>{ing}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {recipe.instructions && (
-                      <div>
-                        <p className="body-xs" style={{ fontWeight: 600, marginBottom: 4, color: 'var(--text-secondary)' }}>Instructions</p>
-                        <p className="body-xs">{recipe.instructions}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+          <Link
+            to="/recipes"
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--accent-pink)', marginTop: 10 }}
+          >
+            Full week plan <ArrowRight size={10} />
+          </Link>
         </div>
       )}
     </div>
@@ -1066,7 +971,7 @@ export default function DashboardPage() {
         <SortableContext items={visibleWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
           <div className="dash-grid">
             {visibleWidgets.map(widget => (
-              <SortableItem key={widget.id} id={widget.id} editMode={editMode}>
+              <SortableItem key={widget.id} id={widget.id} editMode={editMode} span={widget.span}>
                 {(listeners) => (
                   <DashCard
                     widget={widget}

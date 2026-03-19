@@ -1,7 +1,7 @@
 import { useSyncExternalStore, useCallback } from 'react'
 import type {
   Task, Goal, LifeEvent, VisionBoardItem, CustomPage, Widget, WidgetType,
-  CalendarEvent, Book, WeatherCity, MealPlan, MealDay,
+  CalendarEvent, Book, WeatherCity, MealPlan, MealDay, NoteFolder, Note,
 } from '@/types'
 import { v4 as uuid } from 'uuid'
 
@@ -19,6 +19,8 @@ interface AppState {
   books: Book[]
   weatherCities: WeatherCity[]
   mealPlan: MealPlan
+  noteFolders: NoteFolder[]
+  notes: Note[]
 }
 
 const WIDGET_TITLES: Record<WidgetType, string> = {
@@ -78,10 +80,12 @@ const initialState: AppState = {
   books: [],
   weatherCities: [],
   mealPlan: { calorieTarget: 2000, preferences: '', days: [] },
+  noteFolders: [],
+  notes: [],
 }
 
 // ── Persistence ────────────────────────────────────────────────
-const STORAGE_KEY = 'lifeos_v4'
+const STORAGE_KEY = 'lifeos_v5'
 const BG_KEY = 'lifeos_bg'
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -146,6 +150,9 @@ function loadSavedState(): AppState {
     return {
       ...initialState,
       ...(parsed as Partial<AppState>),
+      // Ensure new fields always exist
+      noteFolders: (parsed as any).noteFolders ?? [],
+      notes:       (parsed as any).notes       ?? [],
       backgroundImage: bg,
     }
   } catch {
@@ -328,6 +335,12 @@ export function toggleWidgetVisible(id: string) {
   }))
 }
 
+export function resizeWidget(id: string, span: 1 | 2) {
+  dispatch(s => ({
+    widgets: s.widgets.map(w => w.id === id ? { ...w, span } : w)
+  }))
+}
+
 export function addWidget(type: WidgetType) {
   // If it already exists, just make it visible
   const existing = state.widgets.find(w => w.type === type)
@@ -357,6 +370,44 @@ export function addWeatherCity(city: WeatherCity) {
 
 export function removeWeatherCity(id: string) {
   dispatch(s => ({ weatherCities: s.weatherCities.filter(c => c.id !== id) }))
+}
+
+// Note Folders
+export function addNoteFolder(name: string, icon = '📁', color = 'var(--accent-blue)') {
+  dispatch(s => ({
+    noteFolders: [...s.noteFolders, { id: uuid(), name, icon, color, order: s.noteFolders.length, created_at: new Date().toISOString() }]
+  }))
+}
+
+export function updateNoteFolder(id: string, updates: Partial<NoteFolder>) {
+  dispatch(s => ({ noteFolders: s.noteFolders.map(f => f.id === id ? { ...f, ...updates } : f) }))
+}
+
+export function deleteNoteFolder(id: string) {
+  dispatch(s => ({
+    noteFolders: s.noteFolders.filter(f => f.id !== id),
+    notes: s.notes.filter(n => n.folder_id !== id),
+  }))
+}
+
+// Notes
+export function addNote(folder_id: string, title = 'Untitled'): string {
+  const id = uuid()
+  const now = new Date().toISOString()
+  dispatch(s => ({
+    notes: [...s.notes, { id, folder_id, title, content: '', created_at: now, updated_at: now, pinned: false }]
+  }))
+  return id
+}
+
+export function updateNote(id: string, updates: Partial<Note>) {
+  dispatch(s => ({
+    notes: s.notes.map(n => n.id === id ? { ...n, ...updates, updated_at: new Date().toISOString() } : n)
+  }))
+}
+
+export function deleteNote(id: string) {
+  dispatch(s => ({ notes: s.notes.filter(n => n.id !== id) }))
 }
 
 // Meal Plan
@@ -399,6 +450,13 @@ export function useActions() {
     toggleWidgetCollapsed:  useCallback(toggleWidgetCollapsed, []),
     toggleWidgetVisible:    useCallback(toggleWidgetVisible, []),
     addWidget:              useCallback(addWidget, []),
+    resizeWidget:           useCallback(resizeWidget, []),
+    addNoteFolder:          useCallback(addNoteFolder, []),
+    updateNoteFolder:       useCallback(updateNoteFolder, []),
+    deleteNoteFolder:       useCallback(deleteNoteFolder, []),
+    addNote:                useCallback(addNote, []),
+    updateNote:             useCallback(updateNote, []),
+    deleteNote:             useCallback(deleteNote, []),
     setBackgroundImage:     useCallback(setBackgroundImage, []),
     addBook:                useCallback(addBook, []),
     updateBook:             useCallback(updateBook, []),

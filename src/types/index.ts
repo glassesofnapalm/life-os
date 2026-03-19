@@ -93,6 +93,7 @@ export interface Widget {
   order: number;
   collapsed: boolean;
   visible: boolean;
+  span?: 1 | 2; // grid column span
 }
 
 export type BookStatus = 'reading' | 'finished' | 'want-to-read';
@@ -143,4 +144,23 @@ export interface MealPlan {
   calorieTarget: number;
   preferences: string;
   days: MealDay[];
+}
+
+export interface NoteFolder {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  order: number;
+  created_at: string;
+}
+
+export interface Note {
+  id: string;
+  folder_id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  pinned: boolean;
 }

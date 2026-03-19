@@ -10,6 +10,8 @@ import { NewPagePage } from '@/pages/NewPagePage'
 import { CustomPageView } from '@/pages/CustomPageView'
 import SettingsPage from '@/pages/SettingsPage'
 import SpotifyCallbackPage from '@/pages/SpotifyCallbackPage'
+import RecipesPage from '@/pages/RecipesPage'
+import NotesPage from '@/pages/NotesPage'
 
 export default function App() {
   return (
@@ -28,6 +30,8 @@ export default function App() {
           <Route path="/vision-board" element={<VisionBoardPage />} />
           <Route path="/new-page" element={<NewPagePage />} />
           <Route path="/page/:id" element={<CustomPageView />} />
+          <Route path="/recipes" element={<RecipesPage />} />
+          <Route path="/notes" element={<NotesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>
