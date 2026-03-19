@@ -42,7 +42,7 @@ const defaultWidgets: Widget[] = [
   { id: '6', type: 'goals-progress',    title: 'Goals Progress',      order: 5, collapsed: false, visible: true  },
   { id: '7', type: 'life-events-recent',title: 'Recent Milestones',   order: 6, collapsed: false, visible: true  },
   { id: '8', type: 'stats',             title: 'Overview',            order: 7, collapsed: false, visible: false },
-  { id: '9', type: 'recipes',           title: 'Meal Planner',        order: 8, collapsed: false, visible: false },
+  { id: '9', type: 'recipes',           title: 'Meal Planner',        order: 8, collapsed: false, visible: true  },
 ]
 
 const sampleTasks: Task[] = [
@@ -81,7 +81,7 @@ const initialState: AppState = {
 }
 
 // ── Persistence ────────────────────────────────────────────────
-const STORAGE_KEY = 'lifeos_v3'
+const STORAGE_KEY = 'lifeos_v4'
 const BG_KEY = 'lifeos_bg'
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 

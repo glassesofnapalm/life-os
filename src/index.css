@@ -25,51 +25,51 @@ body {
 
 /* ── CSS Custom Properties ──────────────────────────── */
 :root {
-  /* Default: warm cream (Claude-style) */
-  --bg-solid: #F5F0E8;
+  /* Default: light mode — warm cream */
+  --bg-solid: #EDE8DF;
 
-  /* Glass surfaces — warm white tinted */
-  --glass-bg:        rgba(255, 253, 248, 0.60);
-  --glass-bg-hover:  rgba(255, 253, 248, 0.80);
-  --glass-bg-active: rgba(255, 253, 248, 0.90);
-  --glass-bg-strong: rgba(255, 253, 248, 0.70);
-  --glass-border:    rgba(180, 160, 130, 0.22);
-  --glass-border-strong: rgba(180, 160, 130, 0.38);
-  --glass-shadow:    0 4px 24px rgba(100, 80, 50, 0.10), 0 1px 0 rgba(255,255,255,0.8) inset;
-  --glass-shadow-sm: 0 2px 8px rgba(100, 80, 50, 0.08);
-  --glass-shadow-lg: 0 16px 48px rgba(100, 80, 50, 0.14), 0 1px 0 rgba(255,255,255,0.9) inset;
+  /* Glass surfaces — more opaque for readability on light bg */
+  --glass-bg:        rgba(255, 252, 246, 0.82);
+  --glass-bg-hover:  rgba(255, 252, 246, 0.93);
+  --glass-bg-active: rgba(255, 252, 246, 0.96);
+  --glass-bg-strong: rgba(255, 252, 246, 0.88);
+  --glass-border:    rgba(160, 135, 100, 0.28);
+  --glass-border-strong: rgba(160, 135, 100, 0.48);
+  --glass-shadow:    0 4px 20px rgba(80, 60, 30, 0.12), 0 1px 0 rgba(255,255,255,0.9) inset;
+  --glass-shadow-sm: 0 2px 8px rgba(80, 60, 30, 0.09);
+  --glass-shadow-lg: 0 16px 48px rgba(80, 60, 30, 0.16), 0 1px 0 rgba(255,255,255,0.95) inset;
 
   /* Sidebar */
-  --sidebar-bg:           rgba(245, 240, 230, 0.75);
-  --sidebar-border:       rgba(180, 160, 130, 0.20);
-  --sidebar-active-bg:    rgba(214, 144, 52, 0.12);
-  --sidebar-active-color: #b45309;
-  --sidebar-hover-bg:     rgba(180, 160, 130, 0.12);
+  --sidebar-bg:           rgba(238, 232, 220, 0.92);
+  --sidebar-border:       rgba(160, 135, 100, 0.22);
+  --sidebar-active-bg:    rgba(180, 83, 9, 0.10);
+  --sidebar-active-color: #92400e;
+  --sidebar-hover-bg:     rgba(160, 135, 100, 0.10);
 
-  /* Text — warm dark */
-  --text-primary:   rgba(28, 22, 14, 0.90);
-  --text-secondary: rgba(28, 22, 14, 0.52);
-  --text-tertiary:  rgba(28, 22, 14, 0.32);
-  --text-accent:    #b45309;
+  /* Text — high contrast warm dark */
+  --text-primary:   rgba(20, 15, 8, 0.92);
+  --text-secondary: rgba(20, 15, 8, 0.58);
+  --text-tertiary:  rgba(20, 15, 8, 0.36);
+  --text-accent:    #92400e;
 
-  /* Accent palette */
-  --accent-blue:    #60a5fa;
-  --accent-purple:  #a78bfa;
-  --accent-pink:    #f472b6;
-  --accent-green:   #34d399;
-  --accent-orange:  #fb923c;
-  --accent-red:     #f87171;
-  --accent-yellow:  #fbbf24;
-  --accent-teal:    #2dd4bf;
+  /* Accent palette — darker for light bg contrast */
+  --accent-blue:    #1d4ed8;
+  --accent-purple:  #6d28d9;
+  --accent-pink:    #be185d;
+  --accent-green:   #065f46;
+  --accent-orange:  #c2410c;
+  --accent-red:     #b91c1c;
+  --accent-yellow:  #92400e;
+  --accent-teal:    #0f766e;
 
   /* Accent glass variants */
-  --accent-blue-glass:   rgba(96, 165, 250, 0.15);
-  --accent-purple-glass: rgba(167, 139, 250, 0.15);
-  --accent-pink-glass:   rgba(244, 114, 182, 0.15);
-  --accent-green-glass:  rgba(52, 211, 153, 0.15);
-  --accent-orange-glass: rgba(251, 146, 60, 0.15);
-  --accent-red-glass:    rgba(248, 113, 113, 0.15);
-  --accent-yellow-glass: rgba(251, 191, 36, 0.15);
+  --accent-blue-glass:   rgba(29, 78, 216, 0.10);
+  --accent-purple-glass: rgba(109, 40, 217, 0.10);
+  --accent-pink-glass:   rgba(190, 24, 93, 0.10);
+  --accent-green-glass:  rgba(6, 95, 70, 0.10);
+  --accent-orange-glass: rgba(194, 65, 12, 0.10);
+  --accent-red-glass:    rgba(185, 28, 28, 0.10);
+  --accent-yellow-glass: rgba(146, 64, 14, 0.10);
 
   /* Blur */
   --blur-sm:  blur(12px) saturate(160%);
@@ -441,8 +441,8 @@ body {
 }
 .input::placeholder { color: var(--text-tertiary); }
 .input:focus {
-  border-color: rgba(96, 165, 250, 0.5);
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.12);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-glass);
 }
 
 .textarea {
@@ -693,7 +693,7 @@ select.input {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
 }
 @media (max-width: 640px) {
   .dash-grid {
