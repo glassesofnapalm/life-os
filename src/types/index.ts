@@ -84,7 +84,9 @@ export type WidgetType =
   | 'books'
   | 'weather'
   | 'recipes'
-  | 'stats';
+  | 'stats'
+  | 'daily-briefing'
+  | 'habits-today';
 
 export interface Widget {
   id: string;
@@ -163,4 +165,47 @@ export interface Note {
   created_at: string;
   updated_at: string;
   pinned: boolean;
+}
+
+// ── Habit Tracker ────────────────────────────────────
+export type HabitFrequency = 'daily' | 'weekdays' | 'weekends' | 'weekly';
+
+export interface Habit {
+  id: string;
+  name: string;
+  icon: string;
+  color: string; // accent CSS var name, e.g. 'green'
+  frequency: HabitFrequency;
+  created_at: string;
+  order: number;
+  archived: boolean;
+}
+
+export interface HabitLog {
+  id: string;
+  habit_id: string;
+  date: string; // YYYY-MM-DD
+  completed: boolean;
+}
+
+// ── Journal ─────────────────────────────────────────
+export type JournalMood = 'amazing' | 'good' | 'neutral' | 'low' | 'difficult';
+
+export interface JournalEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  title: string;
+  content: string;
+  mood: JournalMood | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Focus Timer ──────────────────────────────────────
+export interface FocusSession {
+  id: string;
+  started_at: string;
+  duration_min: number; // planned
+  completed: boolean;
+  task_label: string;
 }

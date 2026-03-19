@@ -7,7 +7,7 @@ import {
   TrendingUp, ListChecks, GripVertical, X, Settings2,
   SkipBack, SkipForward, Play, Pause, Search, Check,
   ChefHat, Loader2, Maximize2, Minimize2,
-  ArrowRight,
+  ArrowRight, RotateCcw,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -66,6 +66,8 @@ const WIDGET_TITLES: Record<WidgetType, string> = {
   'life-events-recent': 'Recent Milestones',
   'recipes':            'Meal Planner',
   'stats':              'Overview',
+  'daily-briefing':     'Daily Briefing',
+  'habits-today':       "Today's Habits",
 }
 
 const WIDGET_ICONS: Record<WidgetType, React.ReactNode> = {
@@ -78,6 +80,8 @@ const WIDGET_ICONS: Record<WidgetType, React.ReactNode> = {
   'life-events-recent': <Sparkles size={15} />,
   'recipes':            <ChefHat size={15} />,
   'stats':              <TrendingUp size={15} />,
+  'daily-briefing':     <Sparkles size={15} />,
+  'habits-today':       <CheckCircle2 size={15} />,
 }
 
 const WIDGET_ACCENTS: Record<WidgetType, string> = {
@@ -90,6 +94,8 @@ const WIDGET_ACCENTS: Record<WidgetType, string> = {
   'life-events-recent': 'var(--accent-yellow)',
   'recipes':            'var(--accent-pink)',
   'stats':              'var(--accent-purple)',
+  'daily-briefing':     'var(--accent)',
+  'habits-today':       'var(--accent-green)',
 }
 
 /* ── DashCard wrapper ─────────────────────────────────────────── */
@@ -875,6 +881,150 @@ function RecipesContent() {
   )
 }
 
+/* ── Daily Briefing widget ────────────────────────────────────── */
+function DailyBriefingContent({ tasks, goals }: { tasks: Task[]; goals: Goal[] }) {
+  const [text, setText] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const cacheKey = `briefing_${format(new Date(), 'yyyy-MM-dd')}`
+
+  useEffect(() => {
+    const cached = sessionStorage.getItem(cacheKey)
+    if (cached) setText(cached)
+  }, [cacheKey])
+
+  async function generate() {
+    setLoading(true)
+    setError('')
+    try {
+      const { generateDailyBriefing } = await import('@/lib/claude')
+      const todayTasks = tasks.filter(t => t.status === 'today').map(t => ({ title: t.title, priority: t.priority }))
+      const result = await generateDailyBriefing({
+        date: format(new Date(), 'EEEE, MMMM d'),
+        tasks: todayTasks,
+        events: [],
+        goals: goals.map(g => ({ title: g.title, progress: g.progress })),
+        habitStreak: 0,
+      })
+      setText(result)
+      sessionStorage.setItem(cacheKey, result)
+    } catch (e: any) {
+      setError(e.message || 'Something went wrong')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!text && !loading && !error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '20px 0' }}>
+        <p className="body-sm" style={{ marginBottom: 12 }}>Generate your morning briefing with AI.</p>
+        <button className="btn btn-primary btn-sm" onClick={generate}>
+          <Sparkles size={12} /> Generate briefing
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {loading && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', color: 'var(--text-secondary)' }}>
+          <div className="spinner" style={{ width: 14, height: 14 }} />
+          <span className="body-sm">Writing your briefing…</span>
+        </div>
+      )}
+      {error && (
+        <div style={{ marginBottom: 10 }}>
+          <p className="body-xs" style={{ color: 'var(--accent-red)', marginBottom: 8 }}>{error}</p>
+          <button className="btn btn-ghost btn-sm" onClick={generate}>Try again</button>
+        </div>
+      )}
+      {text && (
+        <div>
+          <p style={{ fontSize: 14, lineHeight: 1.75, color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.005em' }}>
+            {text}
+          </p>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={generate}
+            style={{ marginTop: 12 }}
+          >
+            <RotateCcw size={11} /> Regenerate
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Habits Today widget ──────────────────────────────────────── */
+function HabitsTodayContent() {
+  const allHabits = useStore(s => s.habits)
+  const habitLogs = useStore(s => s.habitLogs)
+  const habits = allHabits.filter(h => !h.archived)
+  const today = format(new Date(), 'yyyy-MM-dd')
+
+  function habitApplies(frequency: string) {
+    const day = new Date().getDay()
+    if (frequency === 'daily') return true
+    if (frequency === 'weekdays') return day >= 1 && day <= 5
+    if (frequency === 'weekends') return day === 0 || day === 6
+    if (frequency === 'weekly') return day === 1
+    return true
+  }
+
+  const todayHabits = habits.filter(h => habitApplies(h.frequency))
+
+  if (todayHabits.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '16px 0' }}>
+        <p className="body-sm" style={{ marginBottom: 10 }}>No habits scheduled today.</p>
+        <Link to="/habits" style={{ fontSize: 12, color: 'var(--accent)' }}>
+          Manage habits <ArrowRight size={10} />
+        </Link>
+      </div>
+    )
+  }
+
+  const done = todayHabits.filter(h =>
+    habitLogs.some(l => l.habit_id === h.id && l.date === today && l.completed)
+  ).length
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span className="body-xs">{done} of {todayHabits.length} done</span>
+        <Link to="/habits" style={{ fontSize: 11, color: 'var(--accent)' }}>View all</Link>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {todayHabits.map(h => {
+          const completed = habitLogs.some(l => l.habit_id === h.id && l.date === today && l.completed)
+          return (
+            <div
+              key={h.id}
+              title={h.name}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '5px 10px', borderRadius: 100,
+                background: completed ? `var(--accent-${h.color}-glass, var(--accent-green-glass))` : 'var(--surface-active)',
+                border: `1px solid ${completed ? `var(--accent-${h.color}, var(--accent-green))` : 'var(--border)'}`,
+                opacity: completed ? 1 : 0.65,
+                fontSize: 12,
+                color: completed ? `var(--accent-${h.color}, var(--accent-green))` : 'var(--text-secondary)',
+              }}
+            >
+              <span>{h.icon}</span>
+              <span style={{ fontWeight: completed ? 500 : 400 }}>{h.name}</span>
+              {completed && <Check size={10} strokeWidth={2.5} />}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 /* ── Widget renderer ──────────────────────────────────────────── */
 function renderWidgetContent(w: Widget, tasks: Task[], goals: Goal[], lifeEvents: LifeEvent[], calendarEvents: CalendarEvent[], books: BookType[]) {
   switch (w.type) {
@@ -887,6 +1037,8 @@ function renderWidgetContent(w: Widget, tasks: Task[], goals: Goal[], lifeEvents
     case 'life-events-recent': return <MilestonesContent events={lifeEvents} />
     case 'stats':              return <StatsContent tasks={tasks} goals={goals} events={calendarEvents} books={books} />
     case 'recipes':            return <RecipesContent />
+    case 'daily-briefing':     return <DailyBriefingContent tasks={tasks} goals={goals} />
+    case 'habits-today':       return <HabitsTodayContent />
     default:                   return null
   }
 }

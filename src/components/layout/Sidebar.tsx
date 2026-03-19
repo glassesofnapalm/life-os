@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, CalendarDays, CheckSquare, Target, Sparkles,
   Heart, Image, Plus, Sun, Moon, FileText, Archive, PanelLeft, PanelLeftClose, Settings, X,
-  UtensilsCrossed, StickyNote,
+  UtensilsCrossed, StickyNote, BookOpen, Flame,
 } from 'lucide-react'
 import { useStore, toggleTheme, toggleSidebar } from '@/stores/store'
 
@@ -13,6 +13,8 @@ const mainNav = [
   { to: '/tasks',       icon: CheckSquare,      label: 'Tasks' },
   { to: '/backlog',     icon: Archive,          label: 'Backlog' },
   { to: '/goals',       icon: Target,           label: 'Goals' },
+  { to: '/habits',      icon: Flame,            label: 'Habits' },
+  { to: '/journal',     icon: BookOpen,         label: 'Journal' },
   { to: '/notes',       icon: StickyNote,       label: 'Notes' },
   { to: '/recipes',     icon: UtensilsCrossed,  label: 'Meal Planner' },
   { to: '/life-events', icon: Heart,            label: 'Life Events' },

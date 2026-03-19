@@ -2,6 +2,7 @@ import { useSyncExternalStore, useCallback } from 'react'
 import type {
   Task, Goal, LifeEvent, VisionBoardItem, CustomPage, Widget, WidgetType,
   CalendarEvent, Book, WeatherCity, MealPlan, MealDay, NoteFolder, Note,
+  Habit, HabitLog, JournalEntry, FocusSession,
 } from '@/types'
 import { v4 as uuid } from 'uuid'
 
@@ -21,6 +22,10 @@ interface AppState {
   mealPlan: MealPlan
   noteFolders: NoteFolder[]
   notes: Note[]
+  habits: Habit[]
+  habitLogs: HabitLog[]
+  journalEntries: JournalEntry[]
+  focusSessions: FocusSession[]
 }
 
 const WIDGET_TITLES: Record<WidgetType, string> = {
@@ -33,6 +38,8 @@ const WIDGET_TITLES: Record<WidgetType, string> = {
   'life-events-recent':  'Recent Milestones',
   'recipes':             'Meal Planner',
   'stats':               'Overview',
+  'daily-briefing':      'Daily Briefing',
+  'habits-today':        "Today's Habits",
 }
 
 const defaultWidgets: Widget[] = [
@@ -43,8 +50,10 @@ const defaultWidgets: Widget[] = [
   { id: '5', type: 'books',             title: 'Reading List',        order: 4, collapsed: false, visible: true  },
   { id: '6', type: 'goals-progress',    title: 'Goals Progress',      order: 5, collapsed: false, visible: true  },
   { id: '7', type: 'life-events-recent',title: 'Recent Milestones',   order: 6, collapsed: false, visible: true  },
-  { id: '8', type: 'stats',             title: 'Overview',            order: 7, collapsed: false, visible: false },
-  { id: '9', type: 'recipes',           title: 'Meal Planner',        order: 8, collapsed: false, visible: true  },
+  { id: '8',  type: 'stats',            title: 'Overview',          order: 7,  collapsed: false, visible: false },
+  { id: '9',  type: 'recipes',          title: 'Meal Planner',      order: 8,  collapsed: false, visible: true  },
+  { id: '10', type: 'daily-briefing',   title: 'Daily Briefing',    order: 9,  collapsed: false, visible: false },
+  { id: '11', type: 'habits-today',     title: "Today's Habits",    order: 10, collapsed: false, visible: false },
 ]
 
 const sampleTasks: Task[] = [
@@ -82,6 +91,10 @@ const initialState: AppState = {
   mealPlan: { calorieTarget: 2000, preferences: '', days: [] },
   noteFolders: [],
   notes: [],
+  habits: [],
+  habitLogs: [],
+  journalEntries: [],
+  focusSessions: [],
 }
 
 // ── Persistence ────────────────────────────────────────────────
@@ -151,8 +164,12 @@ function loadSavedState(): AppState {
       ...initialState,
       ...(parsed as Partial<AppState>),
       // Ensure new fields always exist
-      noteFolders: (parsed as any).noteFolders ?? [],
-      notes:       (parsed as any).notes       ?? [],
+      noteFolders:    (parsed as any).noteFolders    ?? [],
+      notes:          (parsed as any).notes          ?? [],
+      habits:         (parsed as any).habits         ?? [],
+      habitLogs:      (parsed as any).habitLogs      ?? [],
+      journalEntries: (parsed as any).journalEntries ?? [],
+      focusSessions:  (parsed as any).focusSessions  ?? [],
       backgroundImage: bg,
     }
   } catch {
@@ -413,6 +430,71 @@ export function deleteNote(id: string) {
 // Meal Plan
 export function updateMealPlan(updates: Partial<MealPlan>) {
   dispatch(s => ({ mealPlan: { ...s.mealPlan, ...updates } }))
+}
+
+// Habits
+export function addHabit(name: string, icon = '✦', color = 'green', frequency: Habit['frequency'] = 'daily') {
+  dispatch(s => ({
+    habits: [...s.habits, {
+      id: uuid(), name, icon, color, frequency,
+      created_at: new Date().toISOString(),
+      order: s.habits.length,
+      archived: false,
+    }]
+  }))
+}
+
+export function updateHabit(id: string, updates: Partial<Habit>) {
+  dispatch(s => ({ habits: s.habits.map(h => h.id === id ? { ...h, ...updates } : h) }))
+}
+
+export function deleteHabit(id: string) {
+  dispatch(s => ({
+    habits: s.habits.filter(h => h.id !== id),
+    habitLogs: s.habitLogs.filter(l => l.habit_id !== id),
+  }))
+}
+
+export function toggleHabitLog(habit_id: string, date: string) {
+  dispatch(s => {
+    const existing = s.habitLogs.find(l => l.habit_id === habit_id && l.date === date)
+    if (existing) {
+      return { habitLogs: s.habitLogs.map(l =>
+        l.id === existing.id ? { ...l, completed: !l.completed } : l
+      )}
+    }
+    return { habitLogs: [...s.habitLogs, { id: uuid(), habit_id, date, completed: true }] }
+  })
+}
+
+// Journal
+export function addJournalEntry(date: string): string {
+  const id = uuid()
+  const now = new Date().toISOString()
+  dispatch(s => ({
+    journalEntries: [...s.journalEntries, {
+      id, date, title: '', content: '', mood: null,
+      created_at: now, updated_at: now,
+    }]
+  }))
+  return id
+}
+
+export function updateJournalEntry(id: string, updates: Partial<JournalEntry>) {
+  dispatch(s => ({
+    journalEntries: s.journalEntries.map(e =>
+      e.id === id ? { ...e, ...updates, updated_at: new Date().toISOString() } : e
+    )
+  }))
+}
+
+export function deleteJournalEntry(id: string) {
+  dispatch(s => ({ journalEntries: s.journalEntries.filter(e => e.id !== id) }))
+}
+
+// Focus sessions
+export function addFocusSession(session: Omit<FocusSession, 'id'>) {
+  dispatch(s => ({ focusSessions: [...s.focusSessions, { ...session, id: uuid() }] }))
 }
 
 export function setMealDay(day: MealDay) {

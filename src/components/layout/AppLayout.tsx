@@ -1,7 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { Timer } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
+import { QuickCapture } from '@/components/QuickCapture'
+import { FocusTimer } from '@/components/FocusTimer'
 import { useStore } from '@/stores/store'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { useICloudSync } from '@/hooks/useICloudSync'
@@ -11,6 +14,8 @@ export function AppLayout() {
   const collapsed = useStore(s => s.sidebarCollapsed)
   const isMobile = useIsMobile()
   const location = useLocation()
+  const [showCapture, setShowCapture] = useState(false)
+  const [showTimer, setShowTimer] = useState(false)
 
   // Kick off background iCloud polling (15-min interval)
   useICloudSync()
@@ -20,6 +25,20 @@ export function AppLayout() {
     const el = document.getElementById('main-scroll')
     el?.scrollTo({ top: 0, behavior: 'instant' })
   }, [location.pathname])
+
+  // ⌘K / Ctrl+K global shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowCapture(v => !v)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  const closeCapture = useCallback(() => setShowCapture(false), [])
 
   const bgStyle = bgImage
     ? {
@@ -47,6 +66,28 @@ export function AppLayout() {
 
       {/* Mobile bottom nav pill */}
       {isMobile && <BottomNav />}
+
+      {/* Global overlays */}
+      {showCapture && <QuickCapture onClose={closeCapture} />}
+      {showTimer && <FocusTimer onClose={() => setShowTimer(false)} />}
+
+      {/* Focus timer toggle (desktop only, bottom-right) */}
+      {!isMobile && !showTimer && (
+        <button
+          onClick={() => setShowTimer(true)}
+          className="btn-icon"
+          title="Focus Timer (Pomodoro)"
+          style={{
+            position: 'fixed', bottom: 20, right: 20, zIndex: 100,
+            width: 36, height: 36, borderRadius: '50%',
+            background: 'var(--surface-raised)',
+            border: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <Timer size={15} />
+        </button>
+      )}
 
       {/* Main content */}
       <main

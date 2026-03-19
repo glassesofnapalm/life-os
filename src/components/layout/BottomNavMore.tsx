@@ -1,10 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { Target, Heart, Image, UtensilsCrossed, Archive, Settings, FileText, X } from 'lucide-react'
+import { Target, Heart, Image, UtensilsCrossed, Archive, Settings, FileText, X, Flame, BookOpen } from 'lucide-react'
 import { useStore } from '@/stores/store'
 import { useEffect, useRef } from 'react'
 
 const moreNav = [
   { to: '/goals',        icon: Target,          label: 'Goals' },
+  { to: '/habits',       icon: Flame,           label: 'Habits' },
+  { to: '/journal',      icon: BookOpen,        label: 'Journal' },
   { to: '/recipes',      icon: UtensilsCrossed, label: 'Meal Planner' },
   { to: '/backlog',      icon: Archive,         label: 'Backlog' },
   { to: '/life-events',  icon: Heart,           label: 'Life Events' },

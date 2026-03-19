@@ -102,6 +102,29 @@ Keep meal names concise. Instructions should be 1-3 sentences. Vary the meals ac
   }))
 }
 
+export interface DailyBriefingContext {
+  date: string
+  tasks: { title: string; priority: string }[]
+  events: { title: string; start: string }[]
+  goals: { title: string; progress: number }[]
+  habitStreak: number // longest current streak
+}
+
+export async function generateDailyBriefing(ctx: DailyBriefingContext): Promise<string> {
+  const prompt = `You are a calm, thoughtful personal assistant. Write a brief morning briefing (3-4 sentences, no lists) for ${ctx.date}.
+
+Context:
+- Tasks today: ${ctx.tasks.map(t => t.title).join(', ') || 'none'}
+- Events: ${ctx.events.map(e => `${e.title} at ${e.start}`).join(', ') || 'none'}
+- Top goals in progress: ${ctx.goals.slice(0, 2).map(g => `${g.title} (${g.progress}%)`).join(', ') || 'none'}
+- Current habit streak: ${ctx.habitStreak} day${ctx.habitStreak !== 1 ? 's' : ''}
+
+Tone: warm, grounded, Swedish-minimalist. No bullet points, no headers, no emojis. Just clean prose.
+Keep it under 80 words.`
+
+  return callClaude(prompt)
+}
+
 function coerceRecipe(r: any): Recipe {
   return {
     id:           r.id || `r_${Math.random().toString(36).slice(2)}`,

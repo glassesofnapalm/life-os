@@ -12,6 +12,8 @@ import SettingsPage from '@/pages/SettingsPage'
 import SpotifyCallbackPage from '@/pages/SpotifyCallbackPage'
 import RecipesPage from '@/pages/RecipesPage'
 import NotesPage from '@/pages/NotesPage'
+import HabitTrackerPage from '@/pages/HabitTrackerPage'
+import JournalPage from '@/pages/JournalPage'
 
 export default function App() {
   return (
@@ -32,6 +34,8 @@ export default function App() {
           <Route path="/page/:id" element={<CustomPageView />} />
           <Route path="/recipes" element={<RecipesPage />} />
           <Route path="/notes" element={<NotesPage />} />
+          <Route path="/habits" element={<HabitTrackerPage />} />
+          <Route path="/journal" element={<JournalPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>
