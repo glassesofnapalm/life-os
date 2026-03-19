@@ -5,7 +5,7 @@ import {
   Heart, Image, Plus, Sun, Moon, FileText, Archive, PanelLeft, PanelLeftClose, Settings, X,
   UtensilsCrossed, StickyNote,
 } from 'lucide-react'
-import { useStore, useActions } from '@/stores/store'
+import { useStore, toggleTheme, toggleSidebar } from '@/stores/store'
 
 const mainNav = [
   { to: '/',            icon: LayoutDashboard,  label: 'Dashboard' },
@@ -28,7 +28,6 @@ export function Sidebar({ forceMobileExpanded, onNavClick }: SidebarProps) {
   const collapsed = useStore(s => s.sidebarCollapsed)
   const theme     = useStore(s => s.theme)
   const pages     = useStore(s => s.customPages)
-  const { toggleSidebar, toggleTheme } = useActions()
   const navigate  = useNavigate()
 
   // On mobile, always show expanded when open
