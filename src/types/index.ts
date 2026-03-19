@@ -75,12 +75,24 @@ export interface CustomPage {
 
 export type CalendarView = 'day' | 'week' | 'month';
 
+export type WidgetType =
+  | 'tasks-today'
+  | 'calendar-upcoming'
+  | 'goals-progress'
+  | 'life-events-recent'
+  | 'spotify'
+  | 'books'
+  | 'weather'
+  | 'recipes'
+  | 'stats';
+
 export interface Widget {
   id: string;
-  type: 'tasks-today' | 'calendar-upcoming' | 'goals-progress' | 'life-events-recent' | 'quick-note' | 'spotify' | 'books' | 'weather';
+  type: WidgetType;
   title: string;
   order: number;
   collapsed: boolean;
+  visible: boolean;
 }
 
 export type BookStatus = 'reading' | 'finished' | 'want-to-read';
@@ -96,4 +108,39 @@ export interface Book {
   started_at?: string;
   finished_at?: string;
   created_at: string;
+}
+
+export interface WeatherCity {
+  id: string;
+  name: string;
+  country: string;
+  lat: number;
+  lon: number;
+}
+
+export interface Recipe {
+  id: string;
+  name: string;
+  calories: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  ingredients: string[];
+  instructions: string;
+  prepTime?: number;
+  servings?: number;
+}
+
+export interface MealDay {
+  date: string; // YYYY-MM-DD
+  breakfast?: Recipe;
+  lunch?: Recipe;
+  dinner?: Recipe;
+  snack?: Recipe;
+}
+
+export interface MealPlan {
+  calorieTarget: number;
+  preferences: string;
+  days: MealDay[];
 }

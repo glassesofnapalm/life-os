@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
-import { Sun, Moon, Image, Trash2, Upload, CalendarDays, Link2, FileUp, Check, X, Loader2, RefreshCw, Music } from 'lucide-react';
+import { Sun, Moon, Image, Trash2, Upload, CalendarDays, Link2, FileUp, Check, X, Loader2, RefreshCw, Music, Brain } from 'lucide-react';
 import { getSpotifyClientId, setSpotifyClientId, isSpotifyConnected, initiateSpotifyAuth, clearSpotifyAuth, getDeployUrl, setDeployUrl, getSpotifyRedirectUri } from '@/lib/spotify';
+import { getClaudeApiKey, setClaudeApiKey, clearClaudeApiKey, isClaudeConfigured } from '@/lib/claude';
 import { format } from 'date-fns';
 import { useStore, useActions, mergeExternalEvents, clearExternalEvents } from '@/stores/store';
 import {
@@ -138,7 +139,9 @@ function SpotifySettings() {
           {getSpotifyRedirectUri()}
         </code>
         <p className="body-xs" style={{ marginTop: 6, color: 'var(--text-tertiary)' }}>
-          If deploying to Vercel, configure your deployment URL above first.
+          {window.location.hostname === 'localhost'
+            ? 'Local dev: http://localhost is fine — Spotify explicitly allows it. Set your Vercel URL in Deployment below when you go live.'
+            : 'Production: ensure this https:// URI is added in your Spotify app dashboard.'}
         </p>
       </div>
 
@@ -168,6 +171,73 @@ function SpotifySettings() {
           </button>
         )
       )}
+    </div>
+  );
+}
+
+function ClaudeSettings() {
+  const [apiKey, setApiKeyLocal] = useState(() => getClaudeApiKey() || '');
+  const [configured, setConfigured] = useState(isClaudeConfigured);
+  const [saved, setSaved] = useState(false);
+
+  function handleSave() {
+    if (!apiKey.trim()) return;
+    setClaudeApiKey(apiKey.trim());
+    setConfigured(true);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  function handleClear() {
+    clearClaudeApiKey();
+    setApiKeyLocal('');
+    setConfigured(false);
+  }
+
+  return (
+    <div className="glass-card" style={{ padding: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+        <Brain size={18} style={{ color: 'var(--accent-purple)' }} />
+        <h2 className="heading-md">Claude AI</h2>
+        {configured && (
+          <span className="badge badge-green" style={{ marginLeft: 'auto' }}>
+            <Check size={10} /> Configured
+          </span>
+        )}
+      </div>
+
+      <div style={{ background: 'var(--glass-bg-active)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: 14 }}>
+        <p className="body-xs" style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Used for: Meal Planner recipe generation</p>
+        <p className="body-xs">
+          Get a free API key at{' '}
+          <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-blue)' }}>
+            console.anthropic.com
+          </a>
+          . Your key is stored locally and never sent to any server.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <input
+          className="input"
+          placeholder="sk-ant-..."
+          value={apiKey}
+          type="password"
+          onChange={e => setApiKeyLocal(e.target.value)}
+          style={{ flex: 1, fontSize: 13 }}
+        />
+        <button className="btn btn-secondary btn-sm" onClick={handleSave} disabled={!apiKey.trim()}>
+          {saved ? <><Check size={13} /> Saved</> : 'Save'}
+        </button>
+        {configured && (
+          <button className="btn btn-ghost btn-sm" onClick={handleClear} style={{ color: 'var(--accent-red)' }}>
+            <X size={13} />
+          </button>
+        )}
+      </div>
+      <p className="body-xs" style={{ color: 'var(--text-tertiary)' }}>
+        Once set, go to the Dashboard and add the Meal Planner widget to generate weekly recipes.
+      </p>
     </div>
   );
 }
@@ -504,6 +574,9 @@ export default function SettingsPage() {
 
       {/* ── Spotify ── */}
       <SpotifySettings />
+
+      {/* ── Claude AI ── */}
+      <ClaudeSettings />
 
       {/* ── Appearance ── */}
       <div className="glass-card" style={{ padding: 24 }}>
