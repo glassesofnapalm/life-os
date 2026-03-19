@@ -26,7 +26,7 @@ import {
   spotifyPlay, spotifyPause, spotifyNext, spotifyPrev,
   type SpotifyTrack,
 } from '@/lib/spotify'
-import { getClaudeApiKey, generateMealPlan } from '@/lib/claude'
+import { isClaudeConfigured, generateMealPlan } from '@/lib/claude'
 
 /* ── Helpers ──────────────────────────────────────────────────── */
 function getGreeting() {
